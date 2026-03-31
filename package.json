@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "cd client && npm ci && npm run build && cd ../server && npm ci && npm run build && npx prisma generate",
+    "build": "cd client && npm ci --include=dev && npm run build && cd ../server && npm ci --include=dev && npm run build && npx prisma generate",
     "start": "cd server && npx prisma migrate deploy && node dist/index.js"
   }
 }
