@@ -1,0 +1,112 @@
+import Anthropic from '@anthropic-ai/sdk'
+
+const MODEL = 'anthropic/claude-sonnet-4.6'
+
+function getClient() {
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    baseURL: process.env.ANTHROPIC_BASE_URL,
+    defaultHeaders: {
+      'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+    },
+  })
+}
+
+// ─── Распознавание домашнего задания по фото ──────────────────────────────────
+
+export async function recognizeHomework(
+  imageBase64: string,
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+): Promise<{ subject: string; topic: string; task_text: string }> {
+  const client = getClient()
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mimeType, data: imageBase64 },
+          },
+          {
+            type: 'text',
+            text: `Ты помощник учителя начальной школы. На фото — домашнее задание ученика 3 класса российской школы.
+
+Определи три вещи:
+1. subject — предмет: "math" (математика), "russian" (русский язык), "english" (английский язык)
+2. topic — тема задания: краткое название (например: "Таблица умножения на 7", "Безударные гласные в корне", "Present Simple")
+3. task_text — точный текст задания, прочитанный с фото
+
+Ответь СТРОГО в формате JSON, без пояснений и лишнего текста:
+{"subject": "math", "topic": "Таблица умножения", "task_text": "Реши примеры: 3×4= 5×7= 8×6="}
+
+Если не можешь прочитать задание или определить предмет:
+{"error": "Не удалось распознать задание"}`,
+          },
+        ],
+      },
+    ],
+  })
+
+  const raw = response.content[0].type === 'text' ? response.content[0].text.trim() : ''
+  const match = raw.match(/\{[\s\S]*?\}/)
+  if (!match) throw new Error('Не удалось распознать задание')
+
+  const parsed = JSON.parse(match[0]) as { subject?: string; topic?: string; task_text?: string; error?: string }
+  if (parsed.error || !parsed.subject || !parsed.task_text) {
+    throw new Error(parsed.error ?? 'Не удалось распознать задание')
+  }
+
+  return {
+    subject:   parsed.subject,
+    topic:     parsed.topic ?? '',
+    task_text: parsed.task_text,
+  }
+}
+
+// ─── Распознавание письменного ответа из тетради ─────────────────────────────
+
+export async function recognizeAnswer(
+  imageBase64: string,
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+): Promise<string> {
+  const client = getClient()
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 300,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
+        {
+          type: 'text',
+          text: 'На фото — письменный ответ ребёнка 3 класса в тетради. Прочитай только текст ответа и верни его дословно, без пояснений. Если несколько строк — соедини через пробел. Если не можешь прочитать — верни: не разборчиво',
+        },
+      ],
+    }],
+  })
+
+  return response.content[0].type === 'text' ? response.content[0].text.trim() : 'не разборчиво'
+}
+
+// ─── Диалог с репетитором ─────────────────────────────────────────────────────
+
+export async function chatWithTutor(
+  systemPrompt: string,
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+): Promise<string> {
+  const client = getClient()
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: history,
+  })
+
+  return response.content[0].type === 'text' ? response.content[0].text : ''
+}

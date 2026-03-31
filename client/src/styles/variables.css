@@ -1,0 +1,11 @@
+:root {
+  --color-primary: #4F46E5;
+  --color-secondary: #10B981;
+  --color-accent: #F59E0B;
+  --color-danger: #EF4444;
+  --color-bg: #F8FAFC;
+
+  --biome-math: #3B82F6;
+  --biome-russian: #22C55E;
+  --biome-english: #F97316;
+}

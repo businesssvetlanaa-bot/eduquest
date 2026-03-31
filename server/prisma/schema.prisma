@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// AUTH & USERS
+// ─────────────────────────────────────────
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  children  Child[]
+  curricula Curriculum[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// CHILDREN
+// ─────────────────────────────────────────
+
+model Child {
+  id           String    @id @default(cuid())
+  parent_id    String
+  parent       User      @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  name         String
+  grade        Int       @default(3)
+  avatar_type  String    @default("explorer") // explorer | witch | builder | ranger
+  avatar_color String    @default("blue")     // blue | green | orange | purple
+  pin          String?   // 4-digit PIN for child login
+  xp           Int       @default(0)
+  level        Int       @default(1)
+  streak_days  Int       @default(0)
+  coins        Int       @default(50)         // стартовый бонус
+  last_active  DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  sessions         Session[]
+  subject_progress SubjectProgress[]
+  buildings        Building[]
+
+  @@map("children")
+}
+
+// ─────────────────────────────────────────
+// SESSIONS (занятия с репетитором)
+// ─────────────────────────────────────────
+
+model Session {
+  id          String    @id @default(cuid())
+  child_id    String
+  child       Child     @relation(fields: [child_id], references: [id], onDelete: Cascade)
+  subject     Subject
+  topic_id    String?
+  topic       Topic?    @relation(fields: [topic_id], references: [id])
+  task_text   String?   @db.Text
+  image_url   String?
+  started_at  DateTime  @default(now())
+  ended_at    DateTime?
+  completed   Boolean   @default(false)
+  xp_earned   Int       @default(0)
+  coins_earned Int      @default(0)
+
+  messages Message[]
+
+  @@map("sessions")
+}
+
+// ─────────────────────────────────────────
+// MESSAGES (история диалога)
+// ─────────────────────────────────────────
+
+model Message {
+  id         String      @id @default(cuid())
+  session_id String
+  session    Session     @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  role       MessageRole
+  content    String      @db.Text
+  created_at DateTime    @default(now())
+
+  @@map("messages")
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+// ─────────────────────────────────────────
+// SUBJECT PROGRESS (прогресс по предметам)
+// ─────────────────────────────────────────
+
+model SubjectProgress {
+  id             String   @id @default(cuid())
+  child_id       String
+  child          Child    @relation(fields: [child_id], references: [id], onDelete: Cascade)
+  subject        Subject
+  mastery_level  Int      @default(0) // 0-100
+  sessions_count Int      @default(0)
+  updated_at     DateTime @updatedAt
+
+  topic_progress TopicProgress[]
+
+  @@unique([child_id, subject])
+  @@map("subject_progress")
+}
+
+// прогресс по конкретной теме
+model TopicProgress {
+  id                  String          @id @default(cuid())
+  subject_progress_id String
+  subject_progress    SubjectProgress @relation(fields: [subject_progress_id], references: [id], onDelete: Cascade)
+  topic_id            String
+  topic               Topic           @relation(fields: [topic_id], references: [id])
+  mastery_level       Int             @default(0) // 0-100
+  sessions_count      Int             @default(0)
+  updated_at          DateTime        @updatedAt
+
+  @@unique([subject_progress_id, topic_id])
+  @@map("topic_progress")
+}
+
+enum Subject {
+  math
+  russian
+  english
+}
+
+// ─────────────────────────────────────────
+// BUILDINGS (постройки ребёнка)
+// ─────────────────────────────────────────
+
+model Building {
+  id            String       @id @default(cuid())
+  child_id      String
+  child         Child        @relation(fields: [child_id], references: [id], onDelete: Cascade)
+  building_type BuildingType
+  placed        Boolean      @default(false)
+  position_x    Float?
+  position_y    Float?
+  purchased_at  DateTime     @default(now())
+
+  @@map("buildings")
+}
+
+enum BuildingType {
+  house        // Домик — стартовая
+  tree         // Дерево
+  lantern      // Фонарь
+  well         // Колодец
+  windmill     // Мельница
+  tower        // Башня
+  castle       // Замок
+  library      // Библиотека
+  english_flag // Английский флаг
+  fountain     // Фонтан
+  market       // Рынок
+  school       // Школа
+  farm         // Ферма
+  barn         // Амбар
+  bridge       // Мост
+  gazebo       // Беседка
+  garden       // Сад
+  dragon       // Дракон
+  ship         // Корабль
+  lighthouse   // Маяк
+  forge        // Кузница
+  inn          // Таверна
+  temple       // Храм
+  arena        // Арена
+  greenhouse   // Теплица
+  observatory  // Обсерватория
+  treasure     // Сокровищница
+  flower_bed   // Клумба
+  pond         // Пруд
+  statue       // Статуя
+  campfire     // Костёр
+  tent         // Шатёр
+}
+
+// ─────────────────────────────────────────
+// TOPICS (темы ФГОС)
+// ─────────────────────────────────────────
+
+model Topic {
+  id          String   @id @default(cuid())
+  subject     Subject
+  title       String
+  description String   @db.Text
+  keywords    String[] // для поиска по заданию
+  rules       String   @db.Text // правило для системного промпта
+  grade       Int      @default(3)
+  order       Int      // порядок в программе
+  created_at  DateTime @default(now())
+
+  sessions       Session[]
+  topic_progress TopicProgress[]
+
+  @@unique([subject, order])
+  @@map("topics")
+}
+
+// ─────────────────────────────────────────
+// CURRICULA (учебные программы)
+// ─────────────────────────────────────────
+
+model Curriculum {
+  id           String   @id @default(cuid())
+  parent_id    String?  // null = системная программа ФГОС
+  parent       User?    @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  name         String
+  grade        Int      @default(3)
+  subject      Subject
+  is_system    Boolean  @default(false) // true = стандартная ФГОС
+  topics       Json     @default("[]")  // [{id, title, description, order, enabled}]
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@map("curricula")
+}
