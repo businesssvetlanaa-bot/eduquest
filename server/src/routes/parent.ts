@@ -1,5 +1,5 @@
 import { Router, Response } from 'express'
-import { PrismaClient, Subject } from '@prisma/client'
+import { PrismaClient, Subject, Prisma } from '@prisma/client'
 import Anthropic from '@anthropic-ai/sdk'
 import { authMiddleware, requireParent, AuthRequest } from '../middleware/authMiddleware'
 
@@ -39,7 +39,7 @@ parentRouter.get(
     try {
       await assertChildAccess(req.user!.id, req.params['id'] as string)
       const sessions = await prisma.session.findMany({
-        where: { child_id: req.params['id'] },
+        where: { child_id: req.params['id'] as string },
         include: { topic: { select: { title: true } } },
         orderBy: { started_at: 'desc' },
         take: 20,
@@ -66,7 +66,7 @@ parentRouter.get(
     try {
       await assertChildAccess(req.user!.id, req.params['id'] as string)
       const session = await prisma.session.findUnique({
-        where: { id: req.params['session_id'] },
+        where: { id: req.params['session_id'] as string },
         include: {
           messages: { orderBy: { created_at: 'asc' } },
           topic:    { select: { title: true } },
@@ -146,7 +146,7 @@ parentRouter.get(
         where: {
           mastery_level:  { lt: 30 },
           sessions_count: { gte: 2 },
-          subject_progress: { child_id: req.params['id'] },
+          subject_progress: { child_id: req.params['id'] as string },
         },
         include: {
           topic:            { select: { id: true, title: true } },
@@ -208,7 +208,7 @@ curriculaRouter.post(
       const match = raw.match(/\[[\s\S]*\]/)
       if (!match) { res.status(422).json({ error: 'Не удалось извлечь темы из программы' }); return }
 
-      const topics = JSON.parse(match[0]) as unknown[]
+      const topics = JSON.parse(match[0]) as Prisma.InputJsonValue
       const curriculum = await prisma.curriculum.create({
         data: {
           parent_id: req.user!.id,
@@ -258,7 +258,7 @@ curriculaRouter.put(
       }
 
       const topics = (curriculum.topics as Array<{ id: string; enabled?: boolean; [k: string]: unknown }>)
-        .map((t) => (t.id === topic_id ? { ...t, enabled } : t))
+        .map((t) => (t.id === topic_id ? { ...t, enabled } : t)) as Prisma.InputJsonValue
 
       await prisma.curriculum.update({ where: { id }, data: { topics } })
       res.json({ ok: true })
