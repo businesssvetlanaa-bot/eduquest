@@ -80,7 +80,7 @@ export default function RegisterPage() {
           <p className="text-gray-500 text-sm">AI-репетитор для 3 класса</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-8">
+        <div className="bg-white rounded-2xl shadow-md p-5 sm:p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Создать аккаунт</h2>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

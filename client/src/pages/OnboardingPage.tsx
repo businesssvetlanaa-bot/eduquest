@@ -172,7 +172,7 @@ export default function OnboardingPage() {
           <div className="flex flex-col gap-3">
             <label className="font-bold text-gray-700">Выберите персонажа</label>
             <p className="text-sm text-gray-400 -mt-1">4 героя × 4 цвета — выбери своего!</p>
-            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {AVATARS.map((avatar) =>
                 COLORS.map((color) => (
                   <AvatarCard

@@ -41,7 +41,7 @@ function BuildPanel({ buildings, coins, onClose, onPlace }: BuildPanelProps) {
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-      className="absolute top-0 right-0 h-full w-72 flex flex-col shadow-2xl z-30"
+      className="absolute top-0 right-0 h-full w-full sm:w-72 flex flex-col shadow-2xl z-30"
       style={{ background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(12px)' }}
     >
       {/* Header */}
@@ -244,16 +244,16 @@ export default function ChildWorld() {
           </span>
 
           {/* Stats */}
-          <div className="flex items-center gap-3 text-sm font-bold flex-shrink-0">
-            <span className="text-yellow-300">⭐ {dashboard.xp}</span>
-            <span className="text-yellow-200">💰 {dashboard.coins}</span>
-            <span className="text-orange-300">🔥 {dashboard.streak_days}</span>
+          <div className="flex items-center gap-2 text-sm font-bold flex-shrink-0">
+            <span className="text-yellow-300 text-xs sm:text-sm">⭐ {dashboard.xp}</span>
+            <span className="text-yellow-200 text-xs sm:text-sm">💰 {dashboard.coins}</span>
+            <span className="hidden sm:inline text-orange-300">🔥 {dashboard.streak_days}</span>
           </div>
 
           {/* Logout */}
           <button
             onClick={() => { logout(); navigate('/login') }}
-            className="text-white/50 hover:text-white text-xs ml-2 transition-colors"
+            className="text-white/50 hover:text-white text-xs ml-1 transition-colors flex-shrink-0"
           >
             Выйти
           </button>
@@ -291,14 +291,14 @@ export default function ChildWorld() {
           >
             <Link
               to={`/child/${id}/homework`}
-              className="flex-1 py-3 rounded-2xl font-bold text-white text-sm text-center active:scale-95 transition-transform shadow-md"
+              className="flex-1 py-3 rounded-2xl font-bold text-white text-xs sm:text-sm text-center active:scale-95 transition-transform shadow-md"
               style={{ background: 'var(--color-primary)' }}
             >
-              📸 Домашнее задание
+              📸 <span className="hidden sm:inline">Домашнее задание</span><span className="sm:hidden">ДЗ</span>
             </Link>
             <button
               onClick={() => setShowBuildPanel(true)}
-              className="flex-1 py-3 rounded-2xl font-bold text-white text-sm active:scale-95 transition-transform shadow-md"
+              className="flex-1 py-3 rounded-2xl font-bold text-white text-xs sm:text-sm active:scale-95 transition-transform shadow-md"
               style={{ background: 'var(--color-secondary)' }}
             >
               🏠 Строить

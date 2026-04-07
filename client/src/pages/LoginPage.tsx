@@ -110,7 +110,7 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <div className="p-8">
+          <div className="p-5 sm:p-8">
             {tab === 'parent' ? (
               <form onSubmit={handleParentLogin} className="flex flex-col gap-4">
                 <h2 className="text-xl font-bold text-gray-800 mb-2">Вход для родителей</h2>

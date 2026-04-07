@@ -362,7 +362,7 @@ export default function SessionPage() {
               </div>
             )}
             <div
-              className="max-w-[78%] px-4 py-3 rounded-2xl text-base leading-relaxed whitespace-pre-wrap"
+              className="max-w-[85%] px-4 py-3 rounded-2xl text-base leading-relaxed whitespace-pre-wrap"
               style={
                 msg.role === 'user'
                   ? { background: 'var(--color-primary)', color: 'white', borderBottomRightRadius: 4 }
