@@ -196,7 +196,7 @@ curriculaRouter.post(
         defaultHeaders: { 'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}` },
       })
       const response = await anthropic.messages.create({
-        model: process.env.ANTHROPIC_MODEL || 'anthropic/claude-sonnet-4-6',
+        model: process.env.ANTHROPIC_MODEL || 'anthropic/claude-sonnet-4.6',
         max_tokens: 2048,
         messages: [{
           role: 'user',

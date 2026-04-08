@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = 'anthropic/claude-sonnet-4-6'
+const MODEL = 'anthropic/claude-sonnet-4.6'
 
 function getClient() {
   return new Anthropic({
