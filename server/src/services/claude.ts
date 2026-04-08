@@ -1,10 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'anthropic/claude-sonnet-4-6'
 
 function getClient() {
   return new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
+    baseURL: process.env.ANTHROPIC_BASE_URL,
+    defaultHeaders: {
+      'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+    },
   })
 }
 
