@@ -556,7 +556,7 @@ export default function WorldMap({
       parent: containerRef.current,
       backgroundColor: '#22c55e',
       scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.ENVELOP,
         autoCenter: Phaser.Scale.CENTER_BOTH,
         width: 800,
         height: 500,

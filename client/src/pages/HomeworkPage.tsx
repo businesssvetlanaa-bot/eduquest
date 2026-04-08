@@ -211,7 +211,7 @@ export default function HomeworkPage() {
 
             <div className="flex flex-col gap-1">
               <label className="text-sm font-bold text-gray-700">
-                Какое задание разбираем? <span className="text-red-500">*</span>
+                Какое задание разбираем? <span className="text-gray-400 font-normal">(необязательно)</span>
               </label>
               <input
                 type="text"
@@ -230,8 +230,7 @@ export default function HomeworkPage() {
 
             <button
               onClick={submitPhoto}
-              disabled={!taskHint.trim()}
-              className="w-full py-4 rounded-2xl font-bold text-white text-lg shadow-md active:scale-95 transition-transform disabled:opacity-40"
+              className="w-full py-4 rounded-2xl font-bold text-white text-lg shadow-md active:scale-95 transition-transform"
               style={{ background: 'var(--color-primary)' }}
             >
               Отправить репетитору →
