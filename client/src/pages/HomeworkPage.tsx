@@ -149,13 +149,21 @@ export default function HomeworkPage() {
       />
 
       {/* Шапка */}
-      <div className="w-full max-w-lg mb-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">
-          Покажи своё домашнее задание 📚
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Профессор Куб поможет тебе разобраться!
-        </p>
+      <div className="w-full max-w-lg mb-8">
+        <button
+          onClick={() => navigate(`/child/${id}/world`)}
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm font-semibold mb-4 transition-colors"
+        >
+          ← В мой мир
+        </button>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">
+            Покажи своё домашнее задание 📚
+          </h1>
+          <p className="text-gray-500 text-sm">
+            Профессор Куб поможет тебе разобраться!
+          </p>
+        </div>
       </div>
 
       <div className="w-full max-w-lg flex flex-col gap-4">
