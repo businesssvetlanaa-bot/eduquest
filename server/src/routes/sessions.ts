@@ -63,7 +63,7 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response): P
     if (image_base64 && image_mime_type) {
       const mimeType = image_mime_type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
       const result = await recognizeHomework(image_base64, mimeType)
-      recognizedSubject = result.subject
+      recognizedSubject = subject ?? result.subject
       recognizedTopic   = result.topic
       recognizedTask    = result.task_text
       if (task_hint?.trim()) recognizedTask += `\nЗадание для разбора: ${task_hint.trim()}`
@@ -122,6 +122,7 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response): P
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Ошибка сервера'
+    console.error('Session start failed:', msg)
     res.status(500).json({ error: msg })
   }
 })

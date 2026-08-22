@@ -2,8 +2,9 @@ import { useRef, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { sessionsApi } from '../api/sessions'
 
-type InputMode = 'choose' | 'preview' | 'text'
+type InputMode = 'subject' | 'activity' | 'choose' | 'preview' | 'text' | 'topic'
 type Subject = 'math' | 'russian' | 'english'
+type Activity = 'homework' | 'learn' | 'practice'
 
 const SUBJECT_LABELS: Record<Subject, string> = {
   math:    'Математика',
@@ -17,17 +18,25 @@ const SUBJECT_COLORS: Record<Subject, string> = {
   english: 'var(--biome-english)',
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      // убираем data:image/...;base64, — оставляем только данные
-      resolve(result.split(',')[1] ?? result)
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+async function prepareImage(file: File): Promise<{ base64: string; mimeType: 'image/jpeg' }> {
+  const supported = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!supported.includes(file.type)) {
+    throw new Error('Этот формат фото не поддерживается. Выбери JPEG, PNG или сделай новый снимок камерой.')
+  }
+
+  const bitmap = await createImageBitmap(file)
+  const maxSide = 1600
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('Не удалось подготовить фотографию')
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  bitmap.close()
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+  return { base64: dataUrl.split(',')[1] ?? '', mimeType: 'image/jpeg' }
 }
 
 export default function HomeworkPage() {
@@ -40,7 +49,8 @@ export default function HomeworkPage() {
   const cameraRef  = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
 
-  const [mode, setMode]           = useState<InputMode>('choose')
+  const [mode, setMode]           = useState<InputMode>(locationSubject ? 'activity' : 'subject')
+  const [activity, setActivity]   = useState<Activity>('homework')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>('')
   const [taskText, setTaskText]   = useState('')
@@ -68,17 +78,17 @@ export default function HomeworkPage() {
     setLoading(true)
     setError('')
     try {
-      const base64 = await fileToBase64(imageFile)
-      const mimeType = imageFile.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+      const { base64, mimeType } = await prepareImage(imageFile)
       const res = await sessionsApi.start({
         child_id:        id,
         image_base64:    base64,
         image_mime_type: mimeType,
+        subject,
         task_hint:       taskHint.trim() || undefined,
       })
       navigate(`/child/${id}/session/${res.session_id}`, { state: { photoPreview: imagePreview } })
     } catch (e) {
-      setError('Не удалось прочитать задание. Сделай фото чётче или напиши текст вручную')
+      setError(e instanceof Error ? e.message : 'Не удалось прочитать задание. Сделай фото чётче или напиши текст вручную')
       setLoading(false)
     }
   }
@@ -93,6 +103,22 @@ export default function HomeworkPage() {
         task_text: taskText.trim(),
         subject,
       })
+      navigate(`/child/${id}/session/${res.session_id}`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка сервера')
+      setLoading(false)
+    }
+  }
+
+  async function submitTopic() {
+    if (!taskText.trim() || !id) return
+    setLoading(true)
+    setError('')
+    try {
+      const instruction = activity === 'learn'
+        ? `Объясни мне тему «${taskText.trim()}» с самого начала и помоги её понять.`
+        : `Проведи тренировку по теме «${taskText.trim()}»: задавай задания по одному, проверяй ответы и давай подсказки.`
+      const res = await sessionsApi.start({ child_id: id, task_text: instruction, subject })
       navigate(`/child/${id}/session/${res.session_id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка сервера')
@@ -157,20 +183,92 @@ export default function HomeworkPage() {
           ← В мой мир
         </button>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">
-            Покажи своё домашнее задание 📚
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Занятие с Профессором Кубом 🎓</h1>
           <p className="text-gray-500 text-sm">
-            Профессор Куб поможет тебе разобраться!
+            Сначала выбери предмет и цель занятия
           </p>
         </div>
       </div>
 
       <div className="w-full max-w-lg flex flex-col gap-4">
 
+        {mode === 'subject' && (
+          <>
+            <h2 className="text-lg font-bold text-gray-800">1. Какой предмет будем изучать?</h2>
+            {(Object.keys(SUBJECT_LABELS) as Subject[]).map(s => (
+              <button
+                key={s}
+                onClick={() => { setSubject(s); setMode('activity') }}
+                className="w-full p-5 rounded-2xl text-left font-bold text-white text-lg shadow-sm active:scale-95 transition-transform"
+                style={{ background: SUBJECT_COLORS[s] }}
+              >
+                {s === 'math' ? '➗' : s === 'russian' ? '📖' : '🔤'} {SUBJECT_LABELS[s]}
+              </button>
+            ))}
+          </>
+        )}
+
+        {mode === 'activity' && (
+          <>
+            <button onClick={() => setMode('subject')} className="self-start text-sm font-semibold text-gray-500">← Изменить предмет</button>
+            <div className="rounded-xl px-4 py-3 text-white font-bold" style={{ background: SUBJECT_COLORS[subject] }}>
+              {SUBJECT_LABELS[subject]}
+            </div>
+            <h2 className="text-lg font-bold text-gray-800">2. Что хочешь сделать?</h2>
+            <button
+              onClick={() => { setActivity('learn'); setTaskText(''); setMode('topic') }}
+              className="flex items-center gap-4 p-5 rounded-2xl bg-white shadow-sm text-left"
+            >
+              <span className="text-4xl">💡</span><div><div className="font-bold text-lg">Изучить тему</div><div className="text-sm text-gray-500">Объяснение с самого начала</div></div>
+            </button>
+            <button
+              onClick={() => { setActivity('practice'); setTaskText(''); setMode('topic') }}
+              className="flex items-center gap-4 p-5 rounded-2xl bg-white shadow-sm text-left"
+            >
+              <span className="text-4xl">🎯</span><div><div className="font-bold text-lg">Потренироваться</div><div className="text-sm text-gray-500">Задания и подсказки по теме</div></div>
+            </button>
+            <button
+              onClick={() => { setActivity('homework'); setMode('choose') }}
+              className="flex items-center gap-4 p-5 rounded-2xl bg-white shadow-sm text-left"
+            >
+              <span className="text-4xl">📚</span><div><div className="font-bold text-lg">Разобрать домашнее задание</div><div className="text-sm text-gray-500">Фото, галерея или текст</div></div>
+            </button>
+          </>
+        )}
+
+        {mode === 'topic' && (
+          <>
+            <button onClick={() => setMode('activity')} className="self-start text-sm font-semibold text-gray-500">← Выбрать другую цель</button>
+            <div className="rounded-xl px-4 py-3 text-white font-bold" style={{ background: SUBJECT_COLORS[subject] }}>
+              {SUBJECT_LABELS[subject]} · {activity === 'learn' ? 'Изучение темы' : 'Тренировка'}
+            </div>
+            <label className="font-bold text-gray-800">Какую тему будем разбирать?</label>
+            <textarea
+              value={taskText}
+              onChange={e => setTaskText(e.target.value)}
+              placeholder="Например: дроби, части речи, Present Simple..."
+              rows={4}
+              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-[var(--color-primary)] outline-none resize-none bg-white"
+            />
+            {error && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>}
+            <button
+              onClick={submitTopic}
+              disabled={!taskText.trim()}
+              className="w-full py-4 rounded-2xl font-bold text-white text-lg disabled:opacity-40"
+              style={{ background: 'var(--color-primary)' }}
+            >
+              Начать занятие →
+            </button>
+          </>
+        )}
+
         {/* ─── Режим выбора способа ─── */}
         {mode === 'choose' && (
           <>
+            <button onClick={() => setMode('activity')} className="self-start text-sm font-semibold text-gray-500">← Выбрать другую цель</button>
+            <div className="rounded-xl px-4 py-3 text-white font-bold" style={{ background: SUBJECT_COLORS[subject] }}>
+              {SUBJECT_LABELS[subject]} · Домашнее задание
+            </div>
             <button
               onClick={() => cameraRef.current?.click()}
               className="flex items-center gap-4 p-5 rounded-2xl bg-white shadow-sm border-2 border-transparent hover:border-[var(--color-primary)] transition-all text-left"

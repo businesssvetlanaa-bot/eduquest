@@ -52,6 +52,7 @@ export function useAuth() {
   const register = useCallback(async (name: string, email: string, password: string) => {
     const data = await authApi.register({ name, email, password })
     localStorage.setItem('token', data.token)
+    localStorage.setItem('parentToken', data.token)
     localStorage.setItem('role', 'parent')
     setState({ token: data.token, role: 'parent', user: data.user, child: null, loading: false })
     return data
@@ -60,12 +61,17 @@ export function useAuth() {
   const login = useCallback(async (email: string, password: string) => {
     const data = await authApi.login({ email, password })
     localStorage.setItem('token', data.token)
+    localStorage.setItem('parentToken', data.token)
     localStorage.setItem('role', 'parent')
     setState({ token: data.token, role: 'parent', user: data.user, child: null, loading: false })
     return data
   }, [])
 
   const childLogin = useCallback(async (child_id: string, pin: string) => {
+    if (localStorage.getItem('role') === 'parent') {
+      const currentToken = localStorage.getItem('token')
+      if (currentToken) localStorage.setItem('parentToken', currentToken)
+    }
     const data = await authApi.childLogin({ child_id, pin })
     localStorage.setItem('token', data.token)
     localStorage.setItem('role', 'child')
@@ -73,11 +79,36 @@ export function useAuth() {
     return data
   }, [])
 
+  const exitChild = useCallback(async () => {
+    const parentToken = localStorage.getItem('parentToken')
+    if (!parentToken) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('role')
+      setState({ token: null, role: null, user: null, child: null, loading: false })
+      return false
+    }
+
+    localStorage.setItem('token', parentToken)
+    localStorage.setItem('role', 'parent')
+    try {
+      const data = await authApi.me()
+      setState({ token: parentToken, role: 'parent', user: data.user ?? null, child: null, loading: false })
+      return true
+    } catch {
+      localStorage.removeItem('token')
+      localStorage.removeItem('parentToken')
+      localStorage.removeItem('role')
+      setState({ token: null, role: null, user: null, child: null, loading: false })
+      return false
+    }
+  }, [])
+
   const logout = useCallback(() => {
     localStorage.removeItem('token')
+    localStorage.removeItem('parentToken')
     localStorage.removeItem('role')
     setState({ token: null, role: null, user: null, child: null, loading: false })
   }, [])
 
-  return { ...state, register, login, childLogin, logout }
+  return { ...state, register, login, childLogin, exitChild, logout }
 }

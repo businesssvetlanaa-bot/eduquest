@@ -1,8 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = 'anthropic/claude-sonnet-4.6'
+const MODEL = process.env.ANTHROPIC_MODEL || 'anthropic/claude-sonnet-4.6'
 
 function getClient() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('Не настроен ключ AI-провайдера')
+  }
   return new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
     baseURL: process.env.ANTHROPIC_BASE_URL,
@@ -33,7 +36,7 @@ export async function recognizeHomework(
           },
           {
             type: 'text',
-            text: `Ты помощник учителя начальной школы. На фото — домашнее задание ученика 3 класса российской школы.
+      text: `Ты помощник учителя начальной школы. На фото — домашнее задание ученика 4 класса российской школы.
 
 Определи три вещи:
 1. subject — предмет: "math" (математика), "russian" (русский язык), "english" (английский язык)
@@ -84,7 +87,7 @@ export async function recognizeAnswer(
         { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageBase64 } },
         {
           type: 'text',
-          text: 'На фото — письменный ответ ребёнка 3 класса в тетради. Прочитай только текст ответа и верни его дословно, без пояснений. Если несколько строк — соедини через пробел. Если не можешь прочитать — верни: не разборчиво',
+          text: 'На фото — письменный ответ ребёнка 4 класса в тетради. Прочитай только текст ответа и верни его дословно, без пояснений. Если несколько строк — соедини через пробел. Если не можешь прочитать — верни: не разборчиво',
         },
       ],
     }],

@@ -103,7 +103,7 @@ function BuildPanel({ buildings, coins, onClose, onPlace }: BuildPanelProps) {
 export default function ChildWorld() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { exitChild } = useAuth()
 
   const [dashboard, setDashboard]       = useState<ChildDashboard | null>(null)
   const [buildingList, setBuildingList] = useState<BuildingItem[]>([])
@@ -252,10 +252,13 @@ export default function ChildWorld() {
 
           {/* Logout */}
           <button
-            onClick={() => { logout(); navigate('/login') }}
+            onClick={async () => {
+              const returnedToParent = await exitChild()
+              navigate(returnedToParent ? '/parent/dashboard' : '/login')
+            }}
             className="text-white/50 hover:text-white text-xs ml-1 transition-colors flex-shrink-0"
           >
-            Выйти
+            К родителю
           </button>
         </div>
 
