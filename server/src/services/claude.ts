@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = process.env.ANTHROPIC_MODEL || 'anthropic/claude-sonnet-4.6'
+const configuredModel = process.env.ANTHROPIC_MODEL || 'anthropic/claude-sonnet-4.6'
+const MODEL = configuredModel.replace('claude-sonnet-4-6', 'claude-sonnet-4.6')
 
 function getClient() {
   if (!process.env.ANTHROPIC_API_KEY) {
