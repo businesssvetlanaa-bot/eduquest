@@ -9,17 +9,17 @@ import HomeworkPage from './pages/HomeworkPage'
 import SessionPage from './pages/SessionPage'
 import ParentChildPage from './pages/ParentChildPage'
 
-function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { token, loading } = useAuth()
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Загрузка...</div>
-  if (!token) return <Navigate to="/login" replace />
-  return <>{children}</>
-}
-
 function RequireParent({ children }: { children: React.ReactNode }) {
   const { token, role, loading } = useAuth()
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Загрузка...</div>
   if (!token || role !== 'parent') return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function RequireChild({ children }: { children: React.ReactNode }) {
+  const { token, role, loading } = useAuth()
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Загрузка...</div>
+  if (!token || role !== 'child') return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -40,15 +40,14 @@ export default function App() {
         <RequireParent><ParentChildPage /></RequireParent>
       } />
 
-      {/* /child/:id/world — доступен и родителю (после онбординга) и ребёнку (после login) */}
       <Route path="/child/:id/world" element={
-        <RequireAuth><ChildWorld /></RequireAuth>
+        <RequireChild><ChildWorld /></RequireChild>
       } />
       <Route path="/child/:id/homework" element={
-        <RequireAuth><HomeworkPage /></RequireAuth>
+        <RequireChild><HomeworkPage /></RequireChild>
       } />
       <Route path="/child/:id/session/:session_id" element={
-        <RequireAuth><SessionPage /></RequireAuth>
+        <RequireChild><SessionPage /></RequireChild>
       } />
     </Routes>
   )

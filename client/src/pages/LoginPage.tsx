@@ -89,7 +89,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="font-pixel text-xl mb-2" style={{ color: 'var(--color-primary)' }}>EduQuest</h1>
-          <p className="text-gray-500 text-sm">AI-репетитор для 3 класса</p>
+          <p className="text-gray-500 text-sm">Игровой AI-репетитор для 4 класса</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">

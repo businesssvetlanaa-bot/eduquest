@@ -1,6 +1,7 @@
 export interface BuildingItem {
   building_type: string
   name: string
+  grade: number
   emoji: string
   description: string
   cost: number
@@ -57,19 +58,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const childrenApi = {
-  create: (body: { name: string; avatar_type: string; avatar_color: string; pin?: string }) =>
-    request<{ id: string; name: string; avatar_type: string; avatar_color: string; xp: number; level: number; coins: number; streak_days: number }>('/children', {
+  create: (body: { name: string; grade: number; avatar_type: string; avatar_color: string; pin?: string }) =>
+    request<{ id: string; name: string; grade: number; avatar_type: string; avatar_color: string; xp: number; level: number; coins: number; streak_days: number }>('/children', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
 
   list: () =>
-    request<Array<{ id: string; name: string; avatar_type: string; avatar_color: string; xp: number; level: number; coins: number; streak_days: number; last_active: string | null }>>('/children'),
+    request<Array<{ id: string; name: string; grade: number; avatar_type: string; avatar_color: string; xp: number; level: number; coins: number; streak_days: number; last_active: string | null }>>('/children'),
 
   dashboard: (id: string) =>
     request<ChildDashboard>(`/children/${id}/dashboard`),
 
-  update: (id: string, body: { name?: string; avatar_type?: string; avatar_color?: string }) =>
+  update: (id: string, body: { name?: string; grade?: number; avatar_type?: string; avatar_color?: string }) =>
     request<{ id: string }>(`/children/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
 
   buildings: (id: string) =>

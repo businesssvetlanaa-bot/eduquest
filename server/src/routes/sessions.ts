@@ -90,6 +90,7 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response): P
     // 4. Строим системный промпт
     const systemPrompt = buildTutorPrompt({
       childName:   child.name,
+      grade:       child.grade,
       subject:     recognizedSubject as 'math' | 'russian' | 'english',
       topicTitle:  topic?.title ?? recognizedTopic ?? recognizedSubject,
       topicRules:  topic?.rules ?? '',
@@ -208,6 +209,7 @@ router.post('/:id/message', authMiddleware, async (req: AuthRequest, res: Respon
     // Строим системный промпт
     const systemPrompt = buildTutorPrompt({
       childName:  session.child.name,
+      grade:      session.child.grade,
       subject:    session.subject as 'math' | 'russian' | 'english',
       topicTitle: session.topic?.title ?? String(session.subject),
       topicRules: session.topic?.rules ?? '',

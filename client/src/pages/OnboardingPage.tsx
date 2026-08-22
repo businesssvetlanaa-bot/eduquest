@@ -22,8 +22,8 @@ const COLORS = [
 const GRADES = [
   { label: '1 класс', available: false },
   { label: '2 класс', available: false },
-  { label: '3 класс', available: true },
-  { label: '4 класс', available: false },
+  { label: '3 класс', value: 3, available: true },
+  { label: '4 класс', value: 4, available: true },
 ]
 
 // ─── Компонент карточки персонажа ─────────────────────────────────────────────
@@ -78,17 +78,11 @@ export default function OnboardingPage() {
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
+  const [grade, setGrade] = useState(4)
   const [avatarType, setAvatarType] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // редирект если дети уже есть
-  useEffect(() => {
-    childrenApi.list().then((children) => {
-      if (children.length > 0) navigate('/parent/dashboard', { replace: true })
-    }).catch(() => {})
-  }, [navigate])
 
   const canSubmit = name.trim().length >= 2 && avatarType && avatarColor
 
@@ -99,10 +93,11 @@ export default function OnboardingPage() {
     try {
       const child = await childrenApi.create({
         name: name.trim(),
+        grade,
         avatar_type: avatarType!,
         avatar_color: avatarColor!,
       })
-      navigate(`/child/${child.id}/world`)
+      navigate('/parent/dashboard')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Ошибка сервера. Попробуйте позже')
     } finally {
@@ -152,18 +147,21 @@ export default function OnboardingPage() {
             <label className="font-bold text-gray-700">Класс</label>
             <div className="flex gap-2 flex-wrap">
               {GRADES.map((g) => (
-                <div
+                <button
                   key={g.label}
+                  type="button"
+                  disabled={!g.available}
+                  onClick={() => g.value && setGrade(g.value)}
                   className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1"
                   style={{
-                    background: g.available ? 'var(--color-primary)' : '#F3F4F6',
-                    color: g.available ? '#fff' : '#9CA3AF',
-                    cursor: g.available ? 'default' : 'not-allowed',
+                    background: g.value === grade ? 'var(--color-primary)' : '#F3F4F6',
+                    color: g.value === grade ? '#fff' : g.available ? '#4B5563' : '#9CA3AF',
+                    cursor: g.available ? 'pointer' : 'not-allowed',
                   }}
                 >
                   {g.label}
                   {!g.available && <span className="text-xs opacity-70">· скоро</span>}
-                </div>
+                </button>
               ))}
             </div>
           </div>

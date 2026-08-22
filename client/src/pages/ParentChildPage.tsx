@@ -668,7 +668,7 @@ export default function ParentChildPage() {
             </div>
             <div className="min-w-0">
               <h1 className="font-bold text-gray-800 truncate">{child.name}</h1>
-              <p className="text-xs text-gray-400">3 класс · Уровень {child.level} · {child.xp} XP</p>
+              <p className="text-xs text-gray-400">{child.grade} класс · Уровень {child.level} · {child.xp} XP</p>
             </div>
           </div>
         )}

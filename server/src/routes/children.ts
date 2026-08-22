@@ -24,7 +24,7 @@ router.get('/by-parent-email', async (req: Request, res: Response): Promise<void
       include: {
         children: {
           select: {
-            id: true, name: true, avatar_type: true, avatar_color: true,
+            id: true, name: true, grade: true, avatar_type: true, avatar_color: true,
             xp: true, level: true, coins: true, streak_days: true,
           },
         },
@@ -50,7 +50,7 @@ router.get('/', authMiddleware, requireParent, async (req: AuthRequest, res: Res
     const children = await prisma.child.findMany({
       where: { parent_id: req.user!.id },
       select: {
-        id: true, name: true, avatar_type: true, avatar_color: true,
+        id: true, name: true, grade: true, avatar_type: true, avatar_color: true,
         xp: true, level: true, coins: true, streak_days: true, last_active: true,
       },
       orderBy: { created_at: 'asc' },
@@ -63,8 +63,9 @@ router.get('/', authMiddleware, requireParent, async (req: AuthRequest, res: Res
 
 // POST /api/children — создать ребёнка
 router.post('/', authMiddleware, requireParent, async (req: AuthRequest, res: Response): Promise<void> => {
-  const { name, avatar_type, avatar_color, pin } = req.body as {
+  const { name, grade, avatar_type, avatar_color, pin } = req.body as {
     name?: string
+    grade?: number
     avatar_type?: string
     avatar_color?: string
     pin?: string
@@ -76,6 +77,10 @@ router.post('/', authMiddleware, requireParent, async (req: AuthRequest, res: Re
   }
   if (!avatar_type || !avatar_color) {
     res.status(400).json({ error: 'Выберите персонажа и цвет' })
+    return
+  }
+  if (grade !== 3 && grade !== 4) {
+    res.status(400).json({ error: 'Сейчас доступны 3 и 4 классы' })
     return
   }
 
@@ -91,7 +96,7 @@ router.post('/', authMiddleware, requireParent, async (req: AuthRequest, res: Re
       data: {
         parent_id:    req.user!.id,
         name:         name.trim(),
-        grade:        3,
+        grade,
         avatar_type,
         avatar_color,
         pin:          pin ?? null,
@@ -152,6 +157,7 @@ router.get('/:id/dashboard', authMiddleware, async (req: AuthRequest, res: Respo
     res.json({
       id:               child.id,
       name:             child.name,
+      grade:            child.grade,
       avatar_type:      child.avatar_type,
       avatar_color:     child.avatar_color,
       xp:               child.xp,
@@ -302,8 +308,9 @@ router.post('/:id/buildings', authMiddleware, async (req: AuthRequest, res: Resp
 // PUT /api/children/:id — обновить имя или аватар
 router.put('/:id', authMiddleware, requireParent, async (req: AuthRequest, res: Response): Promise<void> => {
   const childId = req.params['id'] as string
-  const { name, avatar_type, avatar_color } = req.body as {
+  const { name, grade, avatar_type, avatar_color } = req.body as {
     name?: string
+    grade?: number
     avatar_type?: string
     avatar_color?: string
   }
@@ -319,6 +326,7 @@ router.put('/:id', authMiddleware, requireParent, async (req: AuthRequest, res: 
       where: { id: childId },
       data: {
         ...(name        ? { name: name.trim() } : {}),
+        ...(grade === 3 || grade === 4 ? { grade } : {}),
         ...(avatar_type  ? { avatar_type }       : {}),
         ...(avatar_color ? { avatar_color }       : {}),
       },

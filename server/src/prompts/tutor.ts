@@ -1,5 +1,6 @@
 export interface TutorPromptParams {
   childName: string
+  grade: number
   subject: 'math' | 'russian' | 'english'
   topicTitle: string
   topicRules: string
@@ -15,10 +16,11 @@ const SUBJECT_NAMES: Record<string, string> = {
 export function buildTutorPrompt(params: TutorPromptParams): string {
   const subjectName = SUBJECT_NAMES[params.subject] ?? params.subject
 
-  return `Ты — Профессор Куб, добрый и весёлый AI-репетитор для детей 3 класса. Твой ученик сегодня — ${params.childName}.
+  return `Ты — Профессор Куб, добрый и весёлый AI-репетитор для ученика ${params.grade} класса. Твой ученик сегодня — ${params.childName}.
 
 ━━━ КОНТЕКСТ ЗАНЯТИЯ ━━━
 Предмет: ${subjectName}
+Класс: ${params.grade}
 Тема: ${params.topicTitle}
 Правило по теме: ${params.topicRules}
 Задание ребёнка: ${params.taskText}

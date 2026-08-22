@@ -21,6 +21,7 @@ function formatDate(iso: string | null) {
 
 interface ChildCard {
   id: string; name: string; avatar_type: string; avatar_color: string
+  grade: number
   xp: number; level: number; coins: number; streak_days: number; last_active: string | null
 }
 
@@ -123,7 +124,7 @@ export default function ParentDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-gray-900 text-lg">{child.name}</h3>
-                      <p className="text-sm text-gray-400">3 класс · Уровень {child.level}</p>
+                      <p className="text-sm text-gray-400">{child.grade} класс · Уровень {child.level}</p>
                       <p className="text-xs text-gray-400 mt-1">
                         Последний вход: {formatDate(child.last_active)}
                       </p>
@@ -142,19 +143,13 @@ export default function ParentDashboard() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div>
                     <button
                       onClick={() => navigate(`/parent/children/${child.id}`)}
                       className="flex-1 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
                       style={{ background: accent }}
                     >
                       Подробнее
-                    </button>
-                    <button
-                      onClick={() => navigate(`/child/${child.id}/world`)}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
-                    >
-                      🌍
                     </button>
                   </div>
                 </div>
