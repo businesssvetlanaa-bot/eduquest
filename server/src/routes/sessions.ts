@@ -152,6 +152,36 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response): Prom
   }
 })
 
+// Сохраняем только техническую статистику голосовых функций. Само аудио не храним.
+router.post('/:id/voice-usage', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
+  const sessionId = req.params['id'] as string
+  const { kind, duration_ms = 0, characters = 0 } = req.body as {
+    kind?: string
+    duration_ms?: number
+    characters?: number
+  }
+  const allowedKinds = new Set(['speech_input', 'speech_output', 'speech_output_english'])
+
+  if (!kind || !allowedKinds.has(kind)) {
+    res.status(400).json({ error: 'Неизвестный тип голосового события' })
+    return
+  }
+
+  try {
+    await prisma.voiceUsageEvent.create({
+      data: {
+        session_id: sessionId,
+        kind,
+        duration_ms: Math.max(0, Math.min(Number(duration_ms) || 0, 60 * 60 * 1000)),
+        characters: Math.max(0, Math.min(Number(characters) || 0, 10000)),
+      },
+    })
+    res.status(201).json({ ok: true })
+  } catch {
+    res.status(404).json({ error: 'Сессия не найдена' })
+  }
+})
+
 // ─── POST /api/sessions/:id/message ──────────────────────────────────────────
 router.post('/:id/message', authMiddleware, async (req: AuthRequest, res: Response): Promise<void> => {
   const sessionId = req.params['id'] as string

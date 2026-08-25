@@ -73,8 +73,22 @@ model Session {
   coins_earned Int      @default(0)
 
   messages Message[]
+  voice_usage VoiceUsageEvent[]
 
   @@map("sessions")
+}
+
+model VoiceUsageEvent {
+  id          String   @id @default(cuid())
+  session_id  String
+  session     Session  @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  kind        String   // speech_input | speech_output | speech_output_english
+  duration_ms Int      @default(0)
+  characters Int      @default(0)
+  created_at  DateTime @default(now())
+
+  @@index([session_id, created_at])
+  @@map("voice_usage_events")
 }
 
 // ─────────────────────────────────────────

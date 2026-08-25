@@ -3,6 +3,39 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import confetti from 'canvas-confetti'
 import { sessionsApi, type Message, type SessionData } from '../api/sessions'
 
+interface BrowserSpeechRecognitionEvent extends Event {
+  results: ArrayLike<{ 0: { transcript: string } }>
+}
+
+interface BrowserSpeechRecognitionErrorEvent extends Event {
+  error: string
+}
+
+interface BrowserSpeechRecognition {
+  lang: string
+  interimResults: boolean
+  continuous: boolean
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null
+  onerror: ((event: BrowserSpeechRecognitionErrorEvent) => void) | null
+  onend: (() => void) | null
+  start(): void
+  stop(): void
+}
+
+type SpeechRecognitionConstructor = new () => BrowserSpeechRecognition
+
+function getSpeechRecognition(): SpeechRecognitionConstructor | undefined {
+  const speechWindow = window as typeof window & {
+    SpeechRecognition?: SpeechRecognitionConstructor
+    webkitSpeechRecognition?: SpeechRecognitionConstructor
+  }
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition
+}
+
+function extractEnglishWords(text: string): string {
+  return (text.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) ?? []).join('. ')
+}
+
 const SUBJECT_ICONS: Record<string, string> = {
   math:    '🔢',
   russian: '📖',
@@ -132,6 +165,9 @@ export default function SessionPage() {
   const [input, setInput]           = useState('')
   const [thinking, setThinking]     = useState(false)
   const [sending, setSending]       = useState(false)
+  const [listening, setListening]   = useState(false)
+  const [voiceError, setVoiceError] = useState('')
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
   const [loadError, setLoadError]   = useState('')
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [photoPreview] = useState<string | null>(
@@ -146,6 +182,8 @@ export default function SessionPage() {
   const messagesEndRef  = useRef<HTMLDivElement>(null)
   const textareaRef     = useRef<HTMLTextAreaElement>(null)
   const photoInputRef   = useRef<HTMLInputElement>(null)
+  const recognitionRef  = useRef<BrowserSpeechRecognition | null>(null)
+  const listeningStartedAtRef = useRef(0)
 
   const [pendingPhoto, setPendingPhoto]               = useState<File | null>(null)
   const [pendingPhotoPreview, setPendingPhotoPreview] = useState('')
@@ -171,6 +209,100 @@ export default function SessionPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop()
+    window.speechSynthesis?.cancel()
+  }, [])
+
+  function trackVoiceUsage(
+    kind: 'speech_input' | 'speech_output' | 'speech_output_english',
+    durationMs: number,
+    characters = 0,
+  ) {
+    if (!session_id) return
+    sessionsApi.trackVoiceUsage(session_id, {
+      kind,
+      duration_ms: durationMs,
+      characters,
+    }).catch(() => undefined)
+  }
+
+  function toggleListening() {
+    if (listening) {
+      recognitionRef.current?.stop()
+      return
+    }
+
+    const SpeechRecognition = getSpeechRecognition()
+    if (!SpeechRecognition) {
+      setVoiceError('В этом браузере голосовой ввод не поддерживается. Открой занятие в Chrome.')
+      return
+    }
+
+    setVoiceError('')
+    const recognition = new SpeechRecognition()
+    recognition.lang = session?.subject === 'english' ? 'en-US' : 'ru-RU'
+    recognition.interimResults = false
+    recognition.continuous = false
+    listeningStartedAtRef.current = Date.now()
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim()
+      if (transcript) {
+        setInput(current => current ? `${current} ${transcript}` : transcript)
+      }
+    }
+    recognition.onerror = (event) => {
+      if (event.error !== 'aborted') {
+        setVoiceError(event.error === 'not-allowed'
+          ? 'Разреши доступ к микрофону в настройках браузера.'
+          : 'Не удалось разобрать речь. Нажми на микрофон и попробуй ещё раз.')
+      }
+    }
+    recognition.onend = () => {
+      setListening(false)
+      const duration = Date.now() - listeningStartedAtRef.current
+      if (duration > 0) trackVoiceUsage('speech_input', duration)
+    }
+    recognitionRef.current = recognition
+    setListening(true)
+    recognition.start()
+  }
+
+  function speakMessage(message: Message, englishOnly = false) {
+    if (!('speechSynthesis' in window)) {
+      setVoiceError('Озвучивание не поддерживается этим браузером.')
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    if (speakingMessageId === message.id) {
+      setSpeakingMessageId(null)
+      return
+    }
+
+    const speechText = englishOnly ? extractEnglishWords(message.content) : message.content
+    if (!speechText) {
+      setVoiceError('В этом сообщении нет английских слов для произношения.')
+      return
+    }
+
+    setVoiceError('')
+    const utterance = new SpeechSynthesisUtterance(speechText)
+    utterance.lang = englishOnly ? 'en-US' : 'ru-RU'
+    utterance.rate = englishOnly ? 0.65 : 0.9
+    const startedAt = Date.now()
+    utterance.onend = () => {
+      setSpeakingMessageId(null)
+      trackVoiceUsage(englishOnly ? 'speech_output_english' : 'speech_output', Date.now() - startedAt, speechText.length)
+    }
+    utterance.onerror = () => {
+      setSpeakingMessageId(null)
+      setVoiceError('Не получилось озвучить сообщение. Попробуй ещё раз.')
+    }
+    setSpeakingMessageId(message.id)
+    window.speechSynthesis.speak(utterance)
+  }
 
   // Авторесайз textarea
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -361,15 +493,37 @@ export default function SessionPage() {
                 🎓
               </div>
             )}
-            <div
-              className="max-w-[85%] px-4 py-3 rounded-2xl text-base leading-relaxed whitespace-pre-wrap"
-              style={
-                msg.role === 'user'
-                  ? { background: 'var(--color-primary)', color: 'white', borderBottomRightRadius: 4 }
-                  : { background: '#F0F4FF', color: '#1e293b', borderBottomLeftRadius: 4 }
-              }
-            >
-              {msg.content}
+            <div className="max-w-[85%]">
+              <div
+                className="px-4 py-3 rounded-2xl text-base leading-relaxed whitespace-pre-wrap"
+                style={
+                  msg.role === 'user'
+                    ? { background: 'var(--color-primary)', color: 'white', borderBottomRightRadius: 4 }
+                    : { background: '#F0F4FF', color: '#1e293b', borderBottomLeftRadius: 4 }
+                }
+              >
+                {msg.content}
+              </div>
+              {msg.role === 'assistant' && (
+                <div className="flex flex-wrap gap-2 mt-1 ml-1">
+                  <button
+                    type="button"
+                    onClick={() => speakMessage(msg)}
+                    className="text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-lg px-2.5 py-1.5 active:scale-95"
+                  >
+                    {speakingMessageId === msg.id ? '⏹ Остановить' : '🔊 Прочитать'}
+                  </button>
+                  {session.subject === 'english' && extractEnglishWords(msg.content) && (
+                    <button
+                      type="button"
+                      onClick={() => speakMessage(msg, true)}
+                      className="text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg px-2.5 py-1.5 active:scale-95"
+                    >
+                      🇬🇧 Английские слова медленно
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -422,6 +576,9 @@ export default function SessionPage() {
           </div>
         )}
 
+        {voiceError && <p className="text-center text-sm text-red-500 mb-2">{voiceError}</p>}
+        {listening && <p className="text-center text-sm font-semibold text-red-500 mb-2">🎙 Слушаю… говори спокойно</p>}
+
         <div className="flex items-end gap-2 max-w-2xl mx-auto">
           <textarea
             ref={textareaRef}
@@ -434,6 +591,16 @@ export default function SessionPage() {
             className="flex-1 resize-none rounded-2xl border-2 border-gray-200 focus:border-[var(--color-primary)] outline-none px-4 py-3 text-base text-gray-800 disabled:opacity-60"
             style={{ maxHeight: 120, overflowY: 'auto' }}
           />
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={sending}
+            title={listening ? 'Остановить запись' : 'Ответить голосом'}
+            className="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-xl transition-all active:scale-95 disabled:opacity-40"
+            style={{ background: listening ? '#EF4444' : '#EEF2FF', color: listening ? 'white' : '#4338CA' }}
+          >
+            {listening ? '⏹' : '🎙'}
+          </button>
           <button
             onClick={() => photoInputRef.current?.click()}
             disabled={sending}
@@ -455,7 +622,7 @@ export default function SessionPage() {
             {sending ? '⏳' : '↑'}
           </button>
         </div>
-        <p className="text-center text-xs text-gray-300 mt-1">Enter — отправить · Shift+Enter — перенос</p>
+        <p className="text-center text-xs text-gray-400 mt-1">Нажми 🎙, скажи ответ, проверь текст и отправь</p>
       </div>
 
       {/* ─── Модалка фото ─── */}

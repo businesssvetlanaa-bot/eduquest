@@ -67,4 +67,16 @@ export const sessionsApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  trackVoiceUsage: (
+    sessionId: string,
+    payload: {
+      kind: 'speech_input' | 'speech_output' | 'speech_output_english'
+      duration_ms?: number
+      characters?: number
+    },
+  ) => request<{ ok: true }>(`/sessions/${sessionId}/voice-usage`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
 }
