@@ -36,6 +36,16 @@ function extractEnglishWords(text: string): string {
   return (text.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) ?? []).join('. ')
 }
 
+function prepareSpeechText(text: string): string {
+  return text
+    // Эмодзи остаются видимыми в чате, но синтезатор не произносит их названия.
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}]/gu, ' ')
+    .replace(/[\u200D\uFE0E\uFE0F\u20E3]/g, '')
+    .replace(/[*_#`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 const SUBJECT_ICONS: Record<string, string> = {
   math:    '🔢',
   russian: '📖',
@@ -281,7 +291,9 @@ export default function SessionPage() {
       return
     }
 
-    const speechText = englishOnly ? extractEnglishWords(message.content) : message.content
+    const speechText = englishOnly
+      ? extractEnglishWords(message.content)
+      : prepareSpeechText(message.content)
     if (!speechText) {
       setVoiceError('В этом сообщении нет английских слов для произношения.')
       return
